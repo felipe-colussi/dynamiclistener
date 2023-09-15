@@ -126,8 +126,6 @@ func (s *storage) syncStorage() {
 		}
 	}
 
-	s.Lock()
-	defer s.Unlock()
 	s.initialized = true
 	if updateStorage {
 		if err := s.storage.Update(secret); err != nil {
