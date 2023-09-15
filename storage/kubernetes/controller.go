@@ -31,31 +31,6 @@ func Load(ctx context.Context, secrets v1controller.SecretController, namespace,
 	return storage
 }
 
-/*
-	func New(ctx context.Context, core CoreGetter, namespace, name string, backing dynamiclistener.TLSStorage) dynamiclistener.TLSStorage {
-		storage := &storage{
-			name:      name,
-			namespace: namespace,
-			storage:   backing,
-			ctx:       ctx,
-		}
-
-		// lazy init
-		go func() {
-			wait.PollImmediateUntilWithContext(ctx, time.Second, func(cxt context.Context) (bool, error) {
-				if coreFactory := core(); coreFactory != nil {
-					storage.init(coreFactory.Core().V1().Secret())
-					return true, start.All(ctx, 5, coreFactory)
-				}
-				return false, nil
-			})
-		}()
-
-		return storage
-
-}
-*/
-
 func New(ctx context.Context, core CoreGetter, namespace, name string, backing dynamiclistener.TLSStorage) dynamiclistener.TLSStorage {
 	storage := &storage{
 		name:      name,
@@ -75,7 +50,6 @@ func New(ctx context.Context, core CoreGetter, namespace, name string, backing d
 
 			select {
 			case <-ctx.Done():
-				fmt.Println("DONE on context")
 				return
 			case <-time.After(time.Second):
 				fmt.Println("retry - lazy init")
@@ -94,7 +68,6 @@ type storage struct {
 	secrets         v1controller.SecretController
 	ctx             context.Context
 	tls             dynamiclistener.TLSFactory
-	initialized     bool
 }
 
 func (s *storage) SetFactory(tls dynamiclistener.TLSFactory) {
@@ -121,17 +94,7 @@ func (s *storage) init(secrets v1controller.SecretController) {
 	})
 	s.secrets = secrets
 
-	// Asynchronously sync the backing storage to the Kubernetes secret, as doing so inline may
-	// block the listener from accepting new connections if the apiserver becomes unavailable
-	// after the Secrets controller has been initialized. We're not passing around any contexts
-	// here, nor does the controller accept any, so there's no good way to soft-fail with a
-	// reasonable timeout.
-	go s.syncStorage()
-}
-
-func (s *storage) syncStorage() {
-	var updateStorage bool
-	secret, err := s.Get()
+	secret, err := s.storage.Get()
 	if err == nil && cert.IsValidTLSSecret(secret) {
 		// local storage had a cached secret, ensure that it exists in Kubernetes
 		_, err := s.secrets.Create(&v1.Secret{
@@ -148,20 +111,14 @@ func (s *storage) syncStorage() {
 		}
 	} else {
 		// local storage was empty, try to populate it
-		secret, err = s.secrets.Get(s.namespace, s.name, metav1.GetOptions{})
+		secret, err := s.secrets.Get(s.namespace, s.name, metav1.GetOptions{})
 		if err != nil {
 			if !errors.IsNotFound(err) {
 				logrus.Warnf("Failed to init Kubernetes secret: %v", err)
 			}
-		} else {
-			updateStorage = true
+			return
 		}
-	}
 
-	s.Lock()
-	defer s.Unlock()
-	s.initialized = true
-	if updateStorage {
 		if err := s.storage.Update(secret); err != nil {
 			logrus.Warnf("Failed to init backing storage secret: %v", err)
 		}
@@ -279,5 +236,5 @@ func (s *storage) update(secret *v1.Secret) (err error) {
 func (s *storage) initComplete() bool {
 	s.RLock()
 	defer s.RUnlock()
-	return s.initialized
+	return s.secrets != nil
 }
