@@ -93,7 +93,8 @@ func (s *storage) init(secrets v1controller.SecretController) {
 	// after the Secrets controller has been initialized. We're not passing around any contexts
 	// here, nor does the controller accept any, so there's no good way to soft-fail with a
 	// reasonable timeout.
-	go s.syncStorage()
+
+	s.syncStorage()
 }
 
 func (s *storage) syncStorage() {
