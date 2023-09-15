@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -14,7 +15,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 )
 
@@ -31,6 +31,31 @@ func Load(ctx context.Context, secrets v1controller.SecretController, namespace,
 	return storage
 }
 
+/*
+	func New(ctx context.Context, core CoreGetter, namespace, name string, backing dynamiclistener.TLSStorage) dynamiclistener.TLSStorage {
+		storage := &storage{
+			name:      name,
+			namespace: namespace,
+			storage:   backing,
+			ctx:       ctx,
+		}
+
+		// lazy init
+		go func() {
+			wait.PollImmediateUntilWithContext(ctx, time.Second, func(cxt context.Context) (bool, error) {
+				if coreFactory := core(); coreFactory != nil {
+					storage.init(coreFactory.Core().V1().Secret())
+					return true, start.All(ctx, 5, coreFactory)
+				}
+				return false, nil
+			})
+		}()
+
+		return storage
+
+}
+*/
+
 func New(ctx context.Context, core CoreGetter, namespace, name string, backing dynamiclistener.TLSStorage) dynamiclistener.TLSStorage {
 	storage := &storage{
 		name:      name,
@@ -41,13 +66,21 @@ func New(ctx context.Context, core CoreGetter, namespace, name string, backing d
 
 	// lazy init
 	go func() {
-		wait.PollImmediateUntilWithContext(ctx, time.Second, func(cxt context.Context) (bool, error) {
+		for {
 			if coreFactory := core(); coreFactory != nil {
 				storage.init(coreFactory.Core().V1().Secret())
-				return true, start.All(ctx, 5, coreFactory)
+				_ = start.All(ctx, 5, coreFactory)
+				return
 			}
-			return false, nil
-		})
+
+			select {
+			case <-ctx.Done():
+				fmt.Println("DONE on context")
+				return
+			case <-time.After(time.Second):
+				fmt.Println("retry - lazy init")
+			}
+		}
 	}()
 
 	return storage
