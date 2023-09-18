@@ -98,8 +98,13 @@ func (s *storage) init(secrets v1controller.SecretController) {
 
 func (s *storage) syncStorage() {
 	var updateStorage bool
-	defer logrus.Error("Felipe Debug - Finished to sync storage")
+	logrus.Error("dynamiclistener Felipe Debug - Starting to sync storage")
+	defer logrus.Error("dynamiclistener Felipe Debug - Finished to sync storage")
+	logrus.Error("dynamiclistener Felipe Debug - get 1st lock")
+
 	secret, err := s.Get()
+	logrus.Error("dynamiclistener Felipe Debug - Release 1st lock")
+
 	if err == nil && cert.IsValidTLSSecret(secret) {
 		// local storage had a cached secret, ensure that it exists in Kubernetes
 		_, err := s.secrets.Create(&v1.Secret{
@@ -125,9 +130,15 @@ func (s *storage) syncStorage() {
 			updateStorage = true
 		}
 	}
+	logrus.Error("dynamiclistener Felipe Debug - get 2nd lock")
 
 	s.Lock()
-	defer s.Unlock()
+
+	defer func() {
+		s.Unlock()
+		logrus.Error("dynamiclistener Felipe Debug - Release 2nd lock")
+	}()
+
 	s.initialized = true
 	if updateStorage {
 		if err := s.storage.Update(secret); err != nil {
