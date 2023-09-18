@@ -98,6 +98,7 @@ func (s *storage) init(secrets v1controller.SecretController) {
 
 func (s *storage) syncStorage() {
 	var updateStorage bool
+	defer logrus.Error("Felipe Debug - Finished to sync storage")
 	secret, err := s.Get()
 	if err == nil && cert.IsValidTLSSecret(secret) {
 		// local storage had a cached secret, ensure that it exists in Kubernetes
