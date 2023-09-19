@@ -37,7 +37,7 @@ func (m *memory) Get() (*v1.Secret, error) {
 func (m *memory) Update(secret *v1.Secret) error {
 	_, file, no, ok := runtime.Caller(1)
 	if ok {
-		fmt.Printf("called from %s#%d\n", file, no)
+		fmt.Printf("memory update called from %s#%d\n", file, no)
 	}
 
 	if m.secret != nil {

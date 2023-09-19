@@ -2,6 +2,8 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
+	"runtime"
 	"sync"
 	"time"
 
@@ -98,7 +100,6 @@ func (s *storage) init(secrets v1controller.SecretController) {
 }
 
 func (s *storage) syncStorage() {
-	time.Sleep(10 * time.Second)
 	var updateStorage bool
 	logrus.Error("dynamiclistener Felipe Debug - Starting to sync storage")
 	defer logrus.Error("dynamiclistener Felipe Debug - Finished to sync storage")
@@ -229,6 +230,12 @@ func (s *storage) saveInK8s(secret *v1.Secret) (*v1.Secret, error) {
 }
 
 func (s *storage) Update(secret *v1.Secret) error {
+
+	_, file, no, ok := runtime.Caller(1)
+	if ok {
+		fmt.Printf("controller update called from %s#%d\n", file, no)
+	}
+
 	// Asynchronously update the Kubernetes secret, as doing so inline may block the listener from
 	// accepting new connections if the apiserver becomes unavailable after the Secrets controller
 	// has been initialized. We're not passing around any contexts here, nor does the controller
