@@ -35,6 +35,7 @@ func (m *memory) Get() (*v1.Secret, error) {
 }
 
 func (m *memory) Update(secret *v1.Secret) error {
+	logrus.Errorf("FELIPE - DEBUG RUNING ON MEMORY STORAGE")
 	_, file, no, ok := runtime.Caller(1)
 	if ok {
 		fmt.Printf("memory update called from %s#%d\n", file, no)

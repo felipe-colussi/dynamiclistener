@@ -2,6 +2,7 @@ package static
 
 import (
 	"github.com/rancher/dynamiclistener/factory"
+	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -32,5 +33,6 @@ func (s *Storage) Get() (*v1.Secret, error) {
 }
 
 func (s *Storage) Update(_ *v1.Secret) error {
+	logrus.Errorf("FELIPE - DEBUG RUNING ON STATIC")
 	return nil
 }

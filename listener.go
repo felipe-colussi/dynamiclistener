@@ -520,6 +520,7 @@ func (n *nonNil) Get() (*v1.Secret, error) {
 }
 
 func (n *nonNil) Update(secret *v1.Secret) error {
+	logrus.Errorf("FELIPE - DEBUG RUNING ON nonNill STORAGE")
 	n.Lock()
 	defer n.Unlock()
 

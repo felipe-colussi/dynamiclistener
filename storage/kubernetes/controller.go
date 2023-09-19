@@ -230,7 +230,7 @@ func (s *storage) saveInK8s(secret *v1.Secret) (*v1.Secret, error) {
 }
 
 func (s *storage) Update(secret *v1.Secret) error {
-
+	logrus.Errorf("FELIPE - DEBUG RUNING ON KUBERNETES STORAGE")
 	_, file, no, ok := runtime.Caller(1)
 	if ok {
 		fmt.Printf("controller update called from %s#%d\n", file, no)
