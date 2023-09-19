@@ -381,10 +381,17 @@ func (l *listener) updateCert(cn ...string) error {
 	defer l.RUnlock()
 
 	secret, err := l.storage.Get()
-	// TODO - FELIPE VER AQUI !!   Pega o secret do certificado.
 	if err != nil {
 		return err
 	}
+	// TODO - FELIPE VER AQUI !!   Pega o secret do certificado.
+	if secret == nil {
+		logrus.Errorf("FELIPE - DEBUG -> updateCert Getting secret from storage null secret")
+	} else {
+		logrus.Errorf("FELIPE - DEBUG -> updateCert Getting secret %s / %s , uuid: %s", secret.Namespace, secret.Namespace, secret.UID)
+	}
+
+	logrus.Errorf("FELIPE - DEBUG -> updateCert returning static  %t, updates %t", factory.IsStatic(secret), factory.NeedsUpdate(l.maxSANs, secret, cn...))
 
 	if factory.IsStatic(secret) || !factory.NeedsUpdate(l.maxSANs, secret, cn...) {
 		return nil
@@ -398,6 +405,11 @@ func (l *listener) updateCert(cn ...string) error {
 	secret, updated, err := l.factory.AddCN(secret, append(l.sans, cn...)...)
 	if err != nil {
 		return err
+	}
+
+	if secret != nil {
+
+		logrus.Errorf("FELIPE - DEBUG -> secret %s/%s   will call update %t", secret.Namespace, secret.Name, updated)
 	}
 
 	if updated {

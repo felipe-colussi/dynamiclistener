@@ -27,6 +27,7 @@ func Load(ctx context.Context, secrets v1controller.SecretController, namespace,
 		storage:   backing,
 		ctx:       ctx,
 	}
+	logrus.Errorf("FELIPE - DEBUG, calling storage.Init with: storage: %s/%s", storage.namespace, storage.name)
 	storage.init(secrets)
 	return storage
 }

@@ -1,6 +1,9 @@
 package memory
 
 import (
+	"fmt"
+	"runtime"
+
 	"github.com/rancher/dynamiclistener"
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
@@ -32,6 +35,11 @@ func (m *memory) Get() (*v1.Secret, error) {
 }
 
 func (m *memory) Update(secret *v1.Secret) error {
+	_, file, no, ok := runtime.Caller(1)
+	if ok {
+		fmt.Printf("called from %s#%d\n", file, no)
+	}
+
 	if m.secret != nil {
 		logrus.Errorf("FELIPE - DEBUG memoryUpdate called, m.secret.ResourceVersion: %s  secret.ResourceVersion %s name: %s, namespace: %s", m.secret.ResourceVersion, secret.ResourceVersion, secret.Name, secret.Namespace)
 
