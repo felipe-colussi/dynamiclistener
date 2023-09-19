@@ -98,6 +98,7 @@ func (s *storage) init(secrets v1controller.SecretController) {
 }
 
 func (s *storage) syncStorage() {
+	time.Sleep(10 * time.Second)
 	var updateStorage bool
 	logrus.Error("dynamiclistener Felipe Debug - Starting to sync storage")
 	defer logrus.Error("dynamiclistener Felipe Debug - Finished to sync storage")
