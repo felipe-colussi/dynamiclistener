@@ -94,17 +94,16 @@ func (s *storage) init(secrets v1controller.SecretController) {
 	// after the Secrets controller has been initialized. We're not passing around any contexts
 	// here, nor does the controller accept any, so there's no good way to soft-fail with a
 	// reasonable timeout.
-	go s.syncStorage()
+	s.syncStorage()
 }
 
 func (s *storage) syncStorage() {
-	time.Sleep(10 * time.Second)
 	var updateStorage bool
 	logrus.Error("dynamiclistener Felipe Debug - Starting to sync storage")
 	defer logrus.Error("dynamiclistener Felipe Debug - Finished to sync storage")
 	logrus.Error("dynamiclistener Felipe Debug - get 1st lock")
 
-	secret, err := s.Get()
+	secret, err := s.storage.Get()
 	logrus.Error("dynamiclistener Felipe Debug - Release 1st lock")
 
 	if err == nil && cert.IsValidTLSSecret(secret) {
@@ -134,10 +133,7 @@ func (s *storage) syncStorage() {
 	}
 	logrus.Error("dynamiclistener Felipe Debug - get 2nd lock")
 
-	s.Lock()
-
 	defer func() {
-		s.Unlock()
 		logrus.Error("dynamiclistener Felipe Debug - Release 2nd lock")
 	}()
 
