@@ -140,6 +140,7 @@ func (s *storage) syncStorage() {
 	}()
 
 	s.initialized = true
+	logrus.Errorf("FELIPE - DEBUG Initialized with values: name %s, namespace %s", s.name, s.namespace)
 	if updateStorage {
 		if err := s.storage.Update(secret); err != nil {
 			logrus.Warnf("Failed to init backing storage secret: %v", err)
@@ -173,13 +174,17 @@ func (s *storage) targetSecret() (*v1.Secret, error) {
 
 func (s *storage) saveInK8s(secret *v1.Secret) (*v1.Secret, error) {
 	if !s.initComplete() {
+		logrus.Errorf("FELIPE - DEBUG Skipping saveInK8s, not init not completed, %s/%s", secret.Namespace, secret.Name)
 		return secret, nil
 	}
 
-	targetSecret, err := s.targetSecret()
+	targetSecret, err := s.targetSecret() // If the secret dosen't exist gets from the storage.
 	if err != nil {
 		return nil, err
 	}
+	logrus.Errorf("FELIPE - DEBUG  secret, %s/%s", secret.Namespace, secret.Name)
+
+	logrus.Errorf("FELIPE - DEBUG Target secret, %s/%s", targetSecret.Namespace, targetSecret.Name)
 
 	// if we don't have a TLS factory we can't create certs, so don't bother trying to merge anything,
 	// in favor of just blindly replacing the fields on the Kubernetes secret.
@@ -227,6 +232,7 @@ func (s *storage) Update(secret *v1.Secret) error {
 	// has been initialized. We're not passing around any contexts here, nor does the controller
 	// accept any, so there's no good way to soft-fail with a reasonable timeout.
 	go func() {
+		logrus.Errorf("Calling update assync on secret NS: %s, Name: %s", secret.Namespace, secret.Name)
 		if err := s.update(secret); err != nil {
 			logrus.Errorf("Failed to save TLS secret for %s/%s: %v", secret.Namespace, secret.Name, err)
 		}
@@ -240,7 +246,7 @@ func isConflictOrAlreadyExists(err error) bool {
 
 func (s *storage) update(secret *v1.Secret) (err error) {
 	var newSecret *v1.Secret
-	err = retry.OnError(retry.DefaultRetry, isConflictOrAlreadyExists, func() error {
+	err = retry.OnError(retry.DefaultRetry, isConflictOrAlreadyExists, func() error { // If err != Conflict or exists retry. Otherwise skip
 		newSecret, err = s.saveInK8s(secret)
 		return err
 	})
