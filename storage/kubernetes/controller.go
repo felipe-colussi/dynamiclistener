@@ -88,7 +88,6 @@ func (s *storage) init(secrets v1controller.SecretController) {
 	})
 	s.secrets = secrets
 
-	time.Sleep(1 * time.Second)
 	// Asynchronously sync the backing storage to the Kubernetes secret, as doing so inline may
 	// block the listener from accepting new connections if the apiserver becomes unavailable
 	// after the Secrets controller has been initialized. We're not passing around any contexts
@@ -98,6 +97,7 @@ func (s *storage) init(secrets v1controller.SecretController) {
 }
 
 func (s *storage) syncStorage() {
+	time.Sleep(1 * time.Second)
 	var updateStorage bool
 	secret, err := s.Get()
 	if err == nil && cert.IsValidTLSSecret(secret) {
