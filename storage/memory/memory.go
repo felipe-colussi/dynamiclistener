@@ -32,8 +32,22 @@ func (m *memory) Get() (*v1.Secret, error) {
 }
 
 func (m *memory) Update(secret *v1.Secret) error {
+	if m.secret != nil {
+		logrus.Errorf("FELIPE - DEBUG memoryUpdate called, m.secret.ResourceVersion: %s  secret.ResourceVersion %s name: %s, namespace: %s", m.secret.ResourceVersion, secret.ResourceVersion, secret.Name, secret.Namespace)
+
+	} else {
+		logrus.Error("FELIPE - DEBUG memoryUpdate called, secret nill")
+
+	}
+	if m.secret != nil {
+		logrus.Errorf("FELIPE - DEBUG  m.secret data  name: %s, namespace %s", m.secret.Name, m.secret.Namespace)
+	} else {
+		logrus.Error("FELIPE - DEBUG  m.secret is nill")
+	}
+
 	if m.secret == nil || m.secret.ResourceVersion == "" || m.secret.ResourceVersion != secret.ResourceVersion {
 		if m.storage != nil {
+			logrus.Errorf("FELIPE - DEBUG  - Calling storage update")
 			if err := m.storage.Update(secret); err != nil {
 				return err
 			}

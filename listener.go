@@ -381,6 +381,7 @@ func (l *listener) updateCert(cn ...string) error {
 	defer l.RUnlock()
 
 	secret, err := l.storage.Get()
+	// TODO - FELIPE VER AQUI !!   Pega o secret do certificado.
 	if err != nil {
 		return err
 	}

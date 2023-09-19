@@ -246,7 +246,7 @@ func isConflictOrAlreadyExists(err error) bool {
 
 func (s *storage) update(secret *v1.Secret) (err error) {
 	var newSecret *v1.Secret
-	err = retry.OnError(retry.DefaultRetry, isConflictOrAlreadyExists, func() error { // If err != Conflict or exists retry. Otherwise skip
+	err = retry.OnError(retry.DefaultRetry, isConflictOrAlreadyExists, func() error { // Dosen't Save -> 2023/09/19 14:54:41 [ERROR] FELIPE
 		newSecret, err = s.saveInK8s(secret)
 		return err
 	})
@@ -258,7 +258,9 @@ func (s *storage) update(secret *v1.Secret) (err error) {
 	// Only hold the lock while updating underlying storage
 	s.Lock()
 	defer s.Unlock()
+	// UPDATE STORAGE TO AN EMPTY SECRET. -> its only called when saveInK8S is not called This happens only if it dosen't found
 	return s.storage.Update(newSecret)
+
 }
 
 func (s *storage) initComplete() bool {
