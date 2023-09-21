@@ -42,7 +42,7 @@ func New(ctx context.Context, core CoreGetter, namespace, name string, backing d
 	}
 
 	// lazy init
-	for {
+	func() {
 		wait.PollImmediateUntilWithContext(ctx, time.Second, func(cxt context.Context) (bool, error) {
 			if coreFactory := core(); coreFactory != nil {
 				storage.init(coreFactory.Core().V1().Secret())
@@ -50,7 +50,7 @@ func New(ctx context.Context, core CoreGetter, namespace, name string, backing d
 			}
 			return false, nil
 		})
-	}
+	}()
 
 	return storage
 }
