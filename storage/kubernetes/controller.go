@@ -111,28 +111,33 @@ func (s *storage) syncStorage() {
 			Type: v1.SecretTypeTLS,
 			Data: secret.Data,
 		})
+		logrus.Errorf("FELIPE - created secret %s / %s v: %s", secret.Name, secret.Namespace, secret.ResourceVersion)
 		if err != nil && !errors.IsAlreadyExists(err) {
 			logrus.Warnf("Failed to create Kubernetes secret: %v", err)
 		}
+
 	} else {
 		// local storage was empty, try to populate it
-		secret, err = s.secrets.Get(s.namespace, s.name, metav1.GetOptions{})
-		if err != nil {
-			if !errors.IsNotFound(err) {
+		secret, err = s.secrets.Get(s.namespace, s.name, metav1.GetOptions{}) // GET
+		if err != nil {                                                       // NO SECRET FOUND ->
+			if !errors.IsNotFound(err) { // TRUE  - NOT LOG
 				logrus.Warnf("Failed to init Kubernetes secret: %v", err)
+			} else {
+				logrus.Errorf("FELIPE -  DOING NOTHING ")
 			}
-		} else {
+		} else { // WILL NOT GET HERE
 			updateStorage = true
 		}
 	}
 
 	s.Lock()
 	defer s.Unlock()
-	s.initialized = true
+	s.initialized = true //
 	if updateStorage {
 		if err := s.storage.Update(secret); err != nil {
 			logrus.Warnf("Failed to init backing storage secret: %v", err)
 		}
+		logrus.Errorf("FELIPE - updated secret %s / %s v: %s", secret.Name, secret.Namespace, secret.ResourceVersion)
 	}
 }
 
@@ -264,5 +269,5 @@ func (s *storage) update(secret *v1.Secret) (err error) {
 func (s *storage) initComplete() bool {
 	s.RLock()
 	defer s.RUnlock()
-	return s.initialized && s.secrets != nil
+	return s.initialized
 }
