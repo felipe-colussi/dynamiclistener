@@ -119,6 +119,10 @@ func (s *storage) syncStorage() {
 		if err != nil {
 			if !errors.IsNotFound(err) {
 				logrus.Warnf("Failed to init Kubernetes secret: %v", err)
+			} else {
+				time.Sleep(time.Second * 1)
+				logrus.Error("FELIPE - Retry")
+				s.syncStorage()
 			}
 		} else {
 			updateStorage = true
