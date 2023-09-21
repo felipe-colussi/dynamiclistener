@@ -110,6 +110,7 @@ func (s *storage) syncStorage() {
 			Type: v1.SecretTypeTLS,
 			Data: secret.Data,
 		})
+		logrus.Errorf("Creating secret %s / %s", s.namespace, s.name)
 		if err != nil && !errors.IsAlreadyExists(err) {
 			logrus.Warnf("Failed to create Kubernetes secret: %v", err)
 		}
