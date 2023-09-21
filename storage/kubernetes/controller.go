@@ -99,8 +99,6 @@ func (s *storage) init(secrets v1controller.SecretController) {
 
 func (s *storage) syncStorage() {
 
-	time.Sleep(1 * time.Second)
-
 	var updateStorage bool
 	secret, err := s.Get()
 	// WE HAVE AN EMPTY SECRET on the memory !! But no error.
