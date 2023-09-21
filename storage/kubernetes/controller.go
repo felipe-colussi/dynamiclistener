@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	normalErr "errors"
 	"sync"
 	"time"
 
@@ -161,27 +162,26 @@ func (s *storage) targetSecret() (*v1.Secret, error) {
 
 func (s *storage) saveInK8s(secret *v1.Secret) (*v1.Secret, error) {
 	// wait for storage init
-
-	err := wait.PollUntilContextTimeout(context.Background(), 100*time.Millisecond, 1*time.Minute, true, func(ctx context.Context) (done bool, err error) {
-		logrus.Errorf("Waiting for init, secret %s / %s", secret.Namespace, secret.Name)
-		if !s.initComplete() {
-			return false, nil
-		}
-		logrus.Errorf("Waiting  init completed, secret %s / %s", secret.Namespace, secret.Name)
-
-		return true, nil
-	})
-	if err != nil {
-		logrus.Warnf("storage init pending..skipping saving secret:%v, %v", secret.Name, secret.Namespace)
-		return secret, nil
-	}
-
 	/*
-		if !s.initComplete() {
+		err := wait.PollUntilContextTimeout(context.Background(), 100*time.Millisecond, 1*time.Minute, true, func(ctx context.Context) (done bool, err error) {
+			logrus.Errorf("Waiting for init, secret %s / %s", secret.Namespace, secret.Name)
+			if !s.initComplete() {
+				return false, nil
+			}
+			logrus.Errorf("Waiting  init completed, secret %s / %s", secret.Namespace, secret.Name)
+
+			return true, nil
+		})
+		if err != nil {
+			logrus.Warnf("storage init pending..skipping saving secret:%v, %v", secret.Name, secret.Namespace)
 			return secret, nil
 		}
-
 	*/
+
+	if !s.initComplete() {
+		return nil, normalErr.New("wasn't initialized")
+	}
+
 	targetSecret, err := s.targetSecret()
 	if err != nil {
 		return nil, err
