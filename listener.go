@@ -383,6 +383,7 @@ func (l *listener) updateCert(cn ...string) error {
 
 	secret, err := l.storage.Get()
 	if err != nil {
+		logrus.Fatalf("Error here %s", err.Error())
 		return err
 	}
 
@@ -397,11 +398,13 @@ func (l *listener) updateCert(cn ...string) error {
 
 	secret, updated, err := l.factory.AddCN(secret, append(l.sans, cn...)...)
 	if err != nil {
+		logrus.Fatal("error on add cnn")
 		return err
 	}
 
 	if updated {
 		if err := l.storage.Update(secret); err != nil {
+			logrus.Fatal("error on Update")
 			return err
 		}
 		// Clear version to force cert reload next time loadCert is called by TLSConfig's

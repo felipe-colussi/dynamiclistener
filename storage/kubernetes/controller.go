@@ -162,9 +162,12 @@ func (s *storage) targetSecret() (*v1.Secret, error) {
 func (s *storage) saveInK8s(secret *v1.Secret) (*v1.Secret, error) {
 	// wait for storage init
 	err := wait.PollUntilContextTimeout(context.Background(), 100*time.Millisecond, 1*time.Minute, true, func(ctx context.Context) (done bool, err error) {
+		logrus.Errorf("Waiting for init, secret %s / %s", secret.Namespace, secret.Name)
 		if !s.initComplete() {
 			return false, nil
 		}
+		logrus.Errorf("Waiting  init completed, secret %s / %s", secret.Namespace, secret.Name)
+
 		return true, nil
 	})
 	if err != nil {
