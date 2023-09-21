@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/rancher/dynamiclistener"
-	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -33,7 +32,6 @@ func (s *storage) Get() (*v1.Secret, error) {
 }
 
 func (s *storage) Update(secret *v1.Secret) error {
-	logrus.Errorf("FELIPE - DEBUG RUNING ON FILE STORAGE")
 	f, err := os.Create(s.file)
 	if err != nil {
 		return err

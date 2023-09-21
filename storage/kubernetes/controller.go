@@ -29,7 +29,6 @@ func Load(ctx context.Context, secrets v1controller.SecretController, namespace,
 		storage:   backing,
 		ctx:       ctx,
 	}
-	logrus.Errorf("FELIPE - DEBUG, calling storage.Init with: storage: %s/%s", storage.namespace, storage.name)
 	storage.init(secrets)
 	return storage
 }
@@ -43,7 +42,7 @@ func New(ctx context.Context, core CoreGetter, namespace, name string, backing d
 	}
 
 	// lazy init
-	go func() {
+	for {
 		wait.PollImmediateUntilWithContext(ctx, time.Second, func(cxt context.Context) (bool, error) {
 			if coreFactory := core(); coreFactory != nil {
 				storage.init(coreFactory.Core().V1().Secret())
@@ -51,7 +50,7 @@ func New(ctx context.Context, core CoreGetter, namespace, name string, backing d
 			}
 			return false, nil
 		})
-	}()
+	}
 
 	return storage
 }
@@ -101,12 +100,8 @@ func (s *storage) init(secrets v1controller.SecretController) {
 
 func (s *storage) syncStorage() {
 	var updateStorage bool
-	logrus.Error("dynamiclistener Felipe Debug - Starting to sync storage")
-	defer logrus.Error("dynamiclistener Felipe Debug - Finished to sync storage")
-	logrus.Error("dynamiclistener Felipe Debug - get 1st lock")
 
 	secret, err := s.Get()
-	logrus.Error("dynamiclistener Felipe Debug - Release 1st lock")
 
 	if err == nil && cert.IsValidTLSSecret(secret) {
 		// local storage had a cached secret, ensure that it exists in Kubernetes
@@ -133,17 +128,14 @@ func (s *storage) syncStorage() {
 			updateStorage = true
 		}
 	}
-	logrus.Error("dynamiclistener Felipe Debug - get 2nd lock")
 
 	s.Lock()
 
 	defer func() {
 		s.Unlock()
-		logrus.Error("dynamiclistener Felipe Debug - Release 2nd lock")
 	}()
 
 	s.initialized = true
-	logrus.Errorf("FELIPE - DEBUG Initialized with values: name %s, namespace %s", s.name, s.namespace)
 	if updateStorage {
 		if err := s.storage.Update(secret); err != nil {
 			logrus.Warnf("Failed to init backing storage secret: %v", err)
@@ -176,17 +168,8 @@ func (s *storage) targetSecret() (*v1.Secret, error) {
 }
 
 func (s *storage) saveInK8s(secret *v1.Secret) (*v1.Secret, error) {
-
-	// wait for storage init
-	err := wait.PollUntilContextTimeout(context.Background(), 100*time.Millisecond, 1*time.Minute, true, func(ctx context.Context) (done bool, err error) {
-		if !s.initComplete() {
-			return false, nil
-		}
-		return true, nil
-	})
-	if err != nil {
+	if !s.initComplete() {
 		logrus.Errorf("FELIPE - DEBUG Skipping saveInK8s, not init not completed, %s/%s", secret.Namespace, secret.Name)
-		logrus.Warnf("storage init pending..skipping saving secret:%v, %v", secret.Name, secret.Namespace)
 		return secret, nil
 	}
 
@@ -194,9 +177,6 @@ func (s *storage) saveInK8s(secret *v1.Secret) (*v1.Secret, error) {
 	if err != nil {
 		return nil, err
 	}
-	logrus.Errorf("FELIPE - DEBUG  secret, %s/%s", secret.Namespace, secret.Name)
-
-	logrus.Errorf("FELIPE - DEBUG Target secret, %s/%s", targetSecret.Namespace, targetSecret.Name)
 
 	// if we don't have a TLS factory we can't create certs, so don't bother trying to merge anything,
 	// in favor of just blindly replacing the fields on the Kubernetes secret.
@@ -239,7 +219,6 @@ func (s *storage) saveInK8s(secret *v1.Secret) (*v1.Secret, error) {
 }
 
 func (s *storage) Update(secret *v1.Secret) error {
-	logrus.Errorf("FELIPE - DEBUG RUNING ON KUBERNETES STORAGE")
 	_, file, no, ok := runtime.Caller(1)
 	if ok {
 		fmt.Printf("controller update called from %s#%d\n", file, no)
