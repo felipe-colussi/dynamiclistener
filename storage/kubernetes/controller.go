@@ -97,7 +97,6 @@ func (s *storage) init(secrets v1controller.SecretController) {
 }
 
 func (s *storage) syncStorage() {
-	time.Sleep(1 * time.Second)
 	var updateStorage bool
 	secret, err := s.Get()
 	if err == nil && cert.IsValidTLSSecret(secret) {
