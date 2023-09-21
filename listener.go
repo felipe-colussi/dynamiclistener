@@ -5,7 +5,6 @@ import (
 	"crypto"
 	"crypto/tls"
 	"crypto/x509"
-	"errors"
 	"net"
 	"net/http"
 	"strings"
@@ -383,7 +382,7 @@ func (l *listener) updateCert(cn ...string) error {
 
 	secret, err := l.storage.Get()
 	if err != nil {
-		logrus.Fatalf("Error here %s", err.Error())
+		logrus.Errorf("Error here on secret %s", err.Error())
 		return err
 	}
 
@@ -398,13 +397,13 @@ func (l *listener) updateCert(cn ...string) error {
 
 	secret, updated, err := l.factory.AddCN(secret, append(l.sans, cn...)...)
 	if err != nil {
-		logrus.Fatal("error on add cnn")
+		logrus.Errorf("error on add cnn")
 		return err
 	}
 
 	if updated {
 		if err := l.storage.Update(secret); err != nil {
-			logrus.Fatal("error on Update")
+			logrus.Errorf("error on Update")
 			return err
 		}
 		// Clear version to force cert reload next time loadCert is called by TLSConfig's
@@ -505,9 +504,12 @@ func (n *nonNil) Get() (*v1.Secret, error) {
 
 	s, err := n.storage.Get()
 	if err != nil || s == nil {
-		if s == nil && err == nil {
-			err = errors.New("no secret found. Skipping")
-		}
+		/*
+			if s == nil && err == nil {
+				err = errors.New("no secret found. Skipping")
+			}
+
+		*/
 		return &v1.Secret{}, err
 	}
 	return s, nil
