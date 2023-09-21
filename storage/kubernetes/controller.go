@@ -40,7 +40,7 @@ func New(ctx context.Context, core CoreGetter, namespace, name string, backing d
 	}
 
 	// lazy init
-	func() {
+	go func() {
 		wait.PollImmediateUntilWithContext(ctx, time.Second, func(cxt context.Context) (bool, error) {
 			if coreFactory := core(); coreFactory != nil {
 				storage.init(coreFactory.Core().V1().Secret())
@@ -246,5 +246,5 @@ func (s *storage) update(secret *v1.Secret) (err error) {
 func (s *storage) initComplete() bool {
 	s.RLock()
 	defer s.RUnlock()
-	return s.initialized
+	return s.initialized && s.secrets != nil
 }

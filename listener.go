@@ -5,6 +5,7 @@ import (
 	"crypto"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"net"
 	"net/http"
 	"strings"
@@ -501,6 +502,9 @@ func (n *nonNil) Get() (*v1.Secret, error) {
 
 	s, err := n.storage.Get()
 	if err != nil || s == nil {
+		if s == nil && err == nil {
+			err = errors.New("no secret found. Skipping")
+		}
 		return &v1.Secret{}, err
 	}
 	return s, nil
