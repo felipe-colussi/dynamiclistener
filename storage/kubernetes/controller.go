@@ -79,7 +79,7 @@ func (s *storage) init(secrets v1controller.SecretController) {
 			return nil, nil
 		}
 		if secret.Namespace == s.namespace && secret.Name == s.name {
-			if err := s.Update(secret); err != nil {
+			if err := s.Update(secret); err != nil { // THIS UPDATE IS MESSING UP !
 				return nil, err
 			}
 		}
@@ -97,6 +97,7 @@ func (s *storage) init(secrets v1controller.SecretController) {
 }
 
 func (s *storage) syncStorage() {
+	time.Sleep(1 * time.Second)
 	var updateStorage bool
 	secret, err := s.Get()
 	if err == nil && cert.IsValidTLSSecret(secret) {
@@ -161,6 +162,7 @@ func (s *storage) targetSecret() (*v1.Secret, error) {
 
 func (s *storage) saveInK8s(secret *v1.Secret) (*v1.Secret, error) {
 	// wait for storage init
+
 	err := wait.PollUntilContextTimeout(context.Background(), 100*time.Millisecond, 1*time.Minute, true, func(ctx context.Context) (done bool, err error) {
 		logrus.Errorf("Waiting for init, secret %s / %s", secret.Namespace, secret.Name)
 		if !s.initComplete() {
@@ -175,6 +177,12 @@ func (s *storage) saveInK8s(secret *v1.Secret) (*v1.Secret, error) {
 		return secret, nil
 	}
 
+	/*
+		if !s.initComplete() {
+			return secret, nil
+		}
+
+	*/
 	targetSecret, err := s.targetSecret()
 	if err != nil {
 		return nil, err
