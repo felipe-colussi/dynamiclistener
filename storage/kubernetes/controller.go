@@ -2,7 +2,6 @@ package kubernetes
 
 import (
 	"context"
-	normalErr "errors"
 	"sync"
 	"time"
 
@@ -100,8 +99,12 @@ func (s *storage) init(secrets v1controller.SecretController) {
 func (s *storage) syncStorage() {
 
 	var updateStorage bool
-	secret, err := s.Get()
-	// WE HAVE AN EMPTY SECRET on the memory !! But no error.
+
+	var secret *v1.Secret
+	err := wait.PollUntilContextTimeout(context.Background(), 100*time.Millisecond, 5*time.Second, true, func(ctx context.Context) (done bool, err error) {
+		secret, _ := s.Get() // This will be w8 for the memory storage before sync
+		return secret == nil, nil
+	})
 
 	if err == nil && cert.IsValidTLSSecret(secret) { // TLS IS NOT VALID.
 		// local storage had a cached secret, ensure that it exists in Kubernetes
@@ -187,7 +190,7 @@ func (s *storage) saveInK8s(secret *v1.Secret) (*v1.Secret, error) {
 	*/
 
 	if !s.initComplete() {
-		return nil, normalErr.New("wasn't initialized")
+		return secret, nil
 	}
 
 	targetSecret, err := s.targetSecret()
