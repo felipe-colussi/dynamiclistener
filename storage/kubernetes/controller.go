@@ -160,7 +160,15 @@ func (s *storage) targetSecret() (*v1.Secret, error) {
 }
 
 func (s *storage) saveInK8s(secret *v1.Secret) (*v1.Secret, error) {
-	if !s.initComplete() {
+	// wait for storage init
+	err := wait.PollUntilContextTimeout(context.Background(), 100*time.Millisecond, 1*time.Minute, true, func(ctx context.Context) (done bool, err error) {
+		if !s.initComplete() {
+			return false, nil
+		}
+		return true, nil
+	})
+	if err != nil {
+		logrus.Warnf("storage init pending..skipping saving secret:%v, %v", secret.Name, secret.Namespace)
 		return secret, nil
 	}
 
