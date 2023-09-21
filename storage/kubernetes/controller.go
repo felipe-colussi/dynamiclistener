@@ -2,8 +2,6 @@ package kubernetes
 
 import (
 	"context"
-	"fmt"
-	"runtime"
 	"sync"
 	"time"
 
@@ -100,9 +98,7 @@ func (s *storage) init(secrets v1controller.SecretController) {
 
 func (s *storage) syncStorage() {
 	var updateStorage bool
-
 	secret, err := s.Get()
-
 	if err == nil && cert.IsValidTLSSecret(secret) {
 		// local storage had a cached secret, ensure that it exists in Kubernetes
 		_, err := s.secrets.Create(&v1.Secret{
@@ -130,11 +126,7 @@ func (s *storage) syncStorage() {
 	}
 
 	s.Lock()
-
-	defer func() {
-		s.Unlock()
-	}()
-
+	defer s.Unlock()
 	s.initialized = true
 	if updateStorage {
 		if err := s.storage.Update(secret); err != nil {
@@ -169,11 +161,10 @@ func (s *storage) targetSecret() (*v1.Secret, error) {
 
 func (s *storage) saveInK8s(secret *v1.Secret) (*v1.Secret, error) {
 	if !s.initComplete() {
-		logrus.Errorf("FELIPE - DEBUG Skipping saveInK8s, not init not completed, %s/%s", secret.Namespace, secret.Name)
 		return secret, nil
 	}
 
-	targetSecret, err := s.targetSecret() // If the secret dosen't exist gets from the storage.
+	targetSecret, err := s.targetSecret()
 	if err != nil {
 		return nil, err
 	}
@@ -219,17 +210,11 @@ func (s *storage) saveInK8s(secret *v1.Secret) (*v1.Secret, error) {
 }
 
 func (s *storage) Update(secret *v1.Secret) error {
-	_, file, no, ok := runtime.Caller(1)
-	if ok {
-		fmt.Printf("controller update called from %s#%d\n", file, no)
-	}
-
 	// Asynchronously update the Kubernetes secret, as doing so inline may block the listener from
 	// accepting new connections if the apiserver becomes unavailable after the Secrets controller
 	// has been initialized. We're not passing around any contexts here, nor does the controller
 	// accept any, so there's no good way to soft-fail with a reasonable timeout.
 	go func() {
-		logrus.Errorf("Calling update assync on secret NS: %s, Name: %s", secret.Namespace, secret.Name)
 		if err := s.update(secret); err != nil {
 			logrus.Errorf("Failed to save TLS secret for %s/%s: %v", secret.Namespace, secret.Name, err)
 		}
@@ -243,7 +228,7 @@ func isConflictOrAlreadyExists(err error) bool {
 
 func (s *storage) update(secret *v1.Secret) (err error) {
 	var newSecret *v1.Secret
-	err = retry.OnError(retry.DefaultRetry, isConflictOrAlreadyExists, func() error { // Dosen't Save -> 2023/09/19 14:54:41 [ERROR] FELIPE
+	err = retry.OnError(retry.DefaultRetry, isConflictOrAlreadyExists, func() error {
 		newSecret, err = s.saveInK8s(secret)
 		return err
 	})
@@ -255,9 +240,7 @@ func (s *storage) update(secret *v1.Secret) (err error) {
 	// Only hold the lock while updating underlying storage
 	s.Lock()
 	defer s.Unlock()
-	// UPDATE STORAGE TO AN EMPTY SECRET. -> its only called when saveInK8S is not called This happens only if it dosen't found
 	return s.storage.Update(newSecret)
-
 }
 
 func (s *storage) initComplete() bool {
