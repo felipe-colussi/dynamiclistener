@@ -20,5 +20,6 @@ func IsValidTLSSecret(secret *v1.Secret) bool {
 
 		return false
 	}
+	logrus.Errorf("IS OK")
 	return true
 }

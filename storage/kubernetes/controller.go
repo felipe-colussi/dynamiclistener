@@ -99,12 +99,7 @@ func (s *storage) init(secrets v1controller.SecretController) {
 func (s *storage) syncStorage() {
 
 	var updateStorage bool
-
-	var secret *v1.Secret
-	err := wait.PollUntilContextTimeout(context.Background(), 100*time.Millisecond, 5*time.Second, true, func(ctx context.Context) (done bool, err error) {
-		secret, _ := s.Get() // This will be w8 for the memory storage before sync
-		return secret == nil, nil
-	})
+	secret, err := s.Get() // GET THIS LOCK  WITH EMPTY SECRET.
 
 	if err == nil && cert.IsValidTLSSecret(secret) { // TLS IS NOT VALID.
 		// local storage had a cached secret, ensure that it exists in Kubernetes
@@ -129,7 +124,8 @@ func (s *storage) syncStorage() {
 			if !errors.IsNotFound(err) { // TRUE  - NOT LOG
 				logrus.Warnf("Failed to init Kubernetes secret: %v", err)
 			} else {
-				logrus.Errorf("FELIPE -  DOING NOTHING :/")
+				time.Sleep(1 * time.Second)
+				s.syncStorage() // SYNC UP TO X TIMES
 			}
 		} else { // WILL NOT GET HERE
 			updateStorage = true
