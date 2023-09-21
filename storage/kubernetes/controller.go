@@ -98,9 +98,14 @@ func (s *storage) init(secrets v1controller.SecretController) {
 }
 
 func (s *storage) syncStorage() {
+
+	time.Sleep(1 * time.Second)
+
 	var updateStorage bool
 	secret, err := s.Get()
-	if err == nil && cert.IsValidTLSSecret(secret) {
+	// WE HAVE AN EMPTY SECRET on the memory !! But no error.
+
+	if err == nil && cert.IsValidTLSSecret(secret) { // TLS IS NOT VALID.
 		// local storage had a cached secret, ensure that it exists in Kubernetes
 		_, err := s.secrets.Create(&v1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -123,7 +128,7 @@ func (s *storage) syncStorage() {
 			if !errors.IsNotFound(err) { // TRUE  - NOT LOG
 				logrus.Warnf("Failed to init Kubernetes secret: %v", err)
 			} else {
-				logrus.Errorf("FELIPE -  DOING NOTHING ")
+				logrus.Errorf("FELIPE -  DOING NOTHING :/")
 			}
 		} else { // WILL NOT GET HERE
 			updateStorage = true
