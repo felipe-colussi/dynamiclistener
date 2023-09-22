@@ -26,6 +26,7 @@ func Load(ctx context.Context, secrets v1controller.SecretController, namespace,
 		namespace: namespace,
 		storage:   backing,
 		ctx:       ctx,
+		initSync:  &sync.Once{},
 	}
 	storage.init(secrets)
 	return storage
@@ -37,6 +38,7 @@ func New(ctx context.Context, core CoreGetter, namespace, name string, backing d
 		namespace: namespace,
 		storage:   backing,
 		ctx:       ctx,
+		initSync:  &sync.Once{},
 	}
 
 	// lazy init
@@ -62,6 +64,7 @@ type storage struct {
 	ctx             context.Context
 	tls             dynamiclistener.TLSFactory
 	initialized     bool
+	initSync        *sync.Once
 }
 
 func (s *storage) SetFactory(tls dynamiclistener.TLSFactory) {
@@ -98,7 +101,7 @@ func (s *storage) init(secrets v1controller.SecretController) {
 
 func (s *storage) syncStorage() {
 	var updateStorage bool
-	secret, err := s.Get()
+	secret, err := s.Get() //gets from MEMORY! If it exists it is created on K8S
 	if err == nil && cert.IsValidTLSSecret(secret) {
 		// local storage had a cached secret, ensure that it exists in Kubernetes
 		_, err := s.secrets.Create(&v1.Secret{
@@ -116,14 +119,16 @@ func (s *storage) syncStorage() {
 		}
 	} else {
 		// local storage was empty, try to populate it
+		// If we don`t have a local (It used to happen before, but now is assync) check for kubernetes.
+		// If we do have a secret we overwrite the memory secret.
 		secret, err = s.secrets.Get(s.namespace, s.name, metav1.GetOptions{})
 		if err != nil {
 			if !errors.IsNotFound(err) {
 				logrus.Warnf("Failed to init Kubernetes secret: %v", err)
 			} else {
-				time.Sleep(time.Second * 1)
-				logrus.Error("FELIPE - Retry")
-				s.syncStorage()
+				//time.Sleep(time.Second * 1)
+				logrus.Error("FELIPE - Retry, PROBABLY Was created in save for k8s")
+				//s.syncStorage()
 			}
 		} else {
 			updateStorage = true
@@ -166,7 +171,14 @@ func (s *storage) targetSecret() (*v1.Secret, error) {
 
 func (s *storage) saveInK8s(secret *v1.Secret) (*v1.Secret, error) {
 	if !s.initComplete() {
-		return secret, nil
+		// If this was already handled by initComplete, it should be a no-op, or at worst get
+		// merged with the Kubernetes secret.
+		go s.initSync.Do(func() {
+			for !s.initComplete() {
+				time.Sleep(100 * time.Millisecond)
+			}
+			s.saveInK8s(secret)
+		})
 	}
 
 	targetSecret, err := s.targetSecret()
